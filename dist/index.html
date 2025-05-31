@@ -1,0 +1,39 @@
+<!doctype html><html lang="id"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>App Story - Muhammad Nashirulhaq</title><link rel="shortcut icon" href="favicon.png"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/><link rel="stylesheet" href="styles/styles.css"/><script defer="defer" src="app.bundle.js"></script><link href="app.css" rel="stylesheet"></head><body><a href="#main-content" class="skip-link" id="skip-link" aria-label="Lewati ke konten utama">Lewati ke Konten Utama</a><header><div class="main-header container"><a class="brand-name" href="#/">App Story - Muhammad Nashirulhaq</a> <button id="drawer-button" class="drawer-button" aria-label="Toggle Menu" aria-expanded="false">☰</button><nav id="navigation-drawer" class="navigation-drawer" aria-label="Navigasi utama"><ul id="nav-list" class="nav-list"><li><a href="#/">Beranda</a></li><li><a href="#/about">About</a></li><li id="add-story-link" style="display: none;"><a href="#/add-story">Tambah Cerita</a></li><li id="auth-link"><a href="#/login">Login</a></li></ul></nav></div></header><main id="main-content" class="main-content container" tabindex="-1"><div id="map" style="height: 400px; margin-bottom: 2rem"></div></main><footer class="container"><p>&copy; 2025 App Story - Muhammad Nashirulhaq. All rights reserved.</p></footer><script src="app.js"></script><script>document.addEventListener("DOMContentLoaded", () => {
+        const navList = document.getElementById("nav-list");
+        const drawerBtn = document.getElementById("drawer-button");
+        const authLink = document.getElementById("auth-link");
+        const addStoryLink = document.getElementById("add-story-link");
+        const isAuthenticated = !!localStorage.getItem("authToken");
+
+        // ✅ Tampilkan link tambah cerita jika login
+        if (isAuthenticated) {
+          addStoryLink.style.display = "list-item";
+          authLink.innerHTML = '<a href="#/" id="logout-link">Logout</a>';
+        }
+
+        // ✅ Logout handler (delegasi)
+        authLink.addEventListener("click", (e) => {
+          if (e.target.id === "logout-link") {
+            e.preventDefault();
+            localStorage.removeItem("authToken");
+            alert("Anda telah logout.");
+            window.location.hash = "/login";
+            location.reload(); // Refresh untuk update UI
+          }
+        });
+
+        // ✅ Toggle drawer
+        drawerBtn.addEventListener("click", () => {
+          const isExpanded = drawerBtn.getAttribute("aria-expanded") === "true";
+          navList.classList.toggle("show");
+          drawerBtn.setAttribute("aria-expanded", !isExpanded);
+        });
+
+        // ✅ Klik di luar untuk tutup drawer
+        document.addEventListener("click", (e) => {
+          if (!drawerBtn.contains(e.target) && !navList.contains(e.target)) {
+            navList.classList.remove("show");
+            drawerBtn.setAttribute("aria-expanded", "false");
+          }
+        });
+      });</script></body></html>
