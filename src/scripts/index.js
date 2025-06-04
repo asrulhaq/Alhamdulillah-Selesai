@@ -135,3 +135,4 @@ window.debugApp = {
   setupSkipToContent,
   initializePushNotification
 };
+  

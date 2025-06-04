@@ -1,15 +1,65 @@
-const CACHE_NAME = 'story-app-v1';
+const CACHE_NAME = 'story-app-v3';
+
+const urlsToCache = [
+  '/',
+  '/index.html',
+  '/app.bundle.js',
+  '/app.css',
+  '/app.webmanifest',
+  '/favicon.png',
+  '/logo.png',
+  '/images/logo.png',
+  '/images/icons/icon-72x72.png',
+  '/images/icons/icon-96x96.png',
+  '/images/icons/icon-128x128.png',
+  '/images/icons/icon-144x144.png',
+  '/images/icons/icon-152x152.png',
+  '/images/icons/icon-192x192.png',
+  '/images/icons/icon-384x384.png',
+  '/images/icons/icon-512x512.png'
+];
 
 // Install event
 self.addEventListener('install', (event) => {
-  console.log('🔧 Service Worker: Installing...');
-  self.skipWaiting();
+  console.log('👷 Service Worker installing...');
+  
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('📦 Pre-caching offline assets');
+        return cache.addAll(urlsToCache);
+      })
+      .then(() => {
+        console.log('✅ Pre-caching complete');
+        return self.skipWaiting();
+      })
+      .catch((error) => {
+        console.error('❌ Pre-caching failed:', error);
+      })
+  );
 });
 
 // Activate event
 self.addEventListener('activate', (event) => {
-  console.log('🚀 Service Worker: Activating...');
-  event.waitUntil(self.clients.claim());
+  console.log('👷 Service Worker activating...');
+  
+  event.waitUntil(
+    caches.keys()
+      .then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('🗑️ Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      })
+      .then(() => {
+        console.log('✅ Service Worker activated');
+        return self.clients.claim();
+      })
+  );
 });
 
 // Push event - menangani notifikasi yang masuk
@@ -116,6 +166,83 @@ self.addEventListener('notificationclick', (event) => {
           return self.clients.openWindow(urlToOpen);
         }
       })
+    );
+  }
+});
+
+// Fetch event
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+  
+  console.log('🔍 Fetching:', request.url);
+
+  // Handle API requests differently from static assets
+  if (url.origin === location.origin) {
+    // Static assets - Cache First strategy
+    event.respondWith(
+      caches.match(request)
+        .then((response) => {
+          if (response) {
+            console.log('✅ Cache hit for static asset:', request.url);
+            return response;
+          }
+
+          console.log('🌐 Network request for static asset:', request.url);
+          return fetch(request)
+            .then((networkResponse) => {
+              const responseToCache = networkResponse.clone();
+              
+              caches.open(CACHE_NAME)
+                .then((cache) => {
+                  cache.put(request, responseToCache);
+                  console.log('💾 Cached new static asset:', request.url);
+                });
+
+              return networkResponse;
+            })
+            .catch((error) => {
+              console.error('❌ Static asset fetch failed:', error);
+              // Return offline page for navigation requests
+              if (request.mode === 'navigate') {
+                return caches.match('/index.html');
+              }
+              return new Response('Offline content not available');
+            });
+        })
+    );
+  } else {
+    // API requests - Network First strategy
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          console.log('🌐 Network response for API request:', request.url);
+          
+          // Clone the response before caching it
+          const responseToCache = networkResponse.clone();
+          
+          caches.open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(request, responseToCache);
+              console.log('💾 Cached API response:', request.url);
+            });
+
+          return networkResponse;
+        })
+        .catch((error) => {
+          console.log('📡 Network request failed, trying cache:', request.url);
+          
+          return caches.match(request)
+            .then((cachedResponse) => {
+              if (cachedResponse) {
+                console.log('✅ Returning cached API response:', request.url);
+                return cachedResponse;
+              }
+              
+              console.error('❌ No cached data available for:', request.url);
+              throw error;
+            });
+        })
     );
   }
 });
